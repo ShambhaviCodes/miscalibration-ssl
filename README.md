@@ -18,7 +18,7 @@
 -->
 
 ### Prerequisites
-
+This repo is built on top of [USB](https://github.com/microsoft/Semi-supervised-learning/tree/main).
 USB is built on pytorch, with torchvision, torchaudio, and transformers.
 
 To install the required packages, you can create a conda environment:
