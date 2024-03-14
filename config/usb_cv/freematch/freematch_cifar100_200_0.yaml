@@ -7,6 +7,8 @@ overwrite: True
 use_tensorboard: True
 use_wandb: False
 epoch: 200
+margin_hyperparam: 10
+p_margin: 0
 num_train_iter: 204800
 num_log_iter: 256
 num_eval_iter: 2048

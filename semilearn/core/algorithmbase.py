@@ -39,7 +39,7 @@ from sklearn.metrics import (
     recall_score,
 )
 from torch.cuda.amp import GradScaler, autocast
-
+from semilearn.algorithms.utils import Calibration_Penalty
 
 class AlgorithmBase:
     """
@@ -119,6 +119,11 @@ class AlgorithmBase:
         self._hooks = []  # record underlying hooks
         self.hooks_dict = OrderedDict()  # actual object to be used to call hooks
         self.set_hooks()
+
+        # Adding calibration related parameters
+        self.p_penalty = args.p_margin
+        self.margin_hyperparam = args.margin_hyperparam
+        self.penalty_loss = Calibration_Penalty()
 
     def init(self, **kwargs):
         """
@@ -356,7 +361,7 @@ class AlgorithmBase:
                     break
 
                 self.call_hook("before_train_step")
-                self.out_dict, self.log_dict = self.train_step(
+                self.out_dict, self.log_dict = self.train_step(self.margin_hyperparam,
                     **self.process_batch(**data_lb, **data_ulb)
                 )
                 self.call_hook("after_train_step")

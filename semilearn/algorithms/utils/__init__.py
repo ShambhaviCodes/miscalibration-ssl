@@ -4,3 +4,4 @@
 
 from .misc import *
 from .ops import *
+from .loss import *

@@ -1,12 +1,20 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-
+import matplotlib.pyplot as plt
 import os
+import json
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from semilearn.core.utils import get_net_builder, get_dataset
+from metrics import expected_calibration_error, ECELoss, ClasswiseECELoss, BrierScore, AdaptiveECELoss
+import torch
+import numpy as np
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
 
 
 if __name__ == "__main__":
@@ -18,16 +26,16 @@ if __name__ == "__main__":
     '''
     Backbone Net Configurations
     '''
-    parser.add_argument('--net', type=str, default='wrn_28_2')
+    parser.add_argument('--net', type=str, default='vit_small_patch2_32')
     parser.add_argument('--net_from_name', type=bool, default=False)
 
     '''
     Data Configurations
     '''
-    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--data_dir', type=str, default='./data')
-    parser.add_argument('--dataset', type=str, default='cifar10')
-    parser.add_argument('--num_classes', type=int, default=10)
+    parser.add_argument('--dataset', type=str, default='cifar100')
+    parser.add_argument('--num_classes', type=int, default=100)
     parser.add_argument('--img_size', type=int, default=32)
     parser.add_argument('--crop_ratio', type=int, default=0.875)
     parser.add_argument('--max_length', type=int, default=512)
@@ -57,7 +65,7 @@ if __name__ == "__main__":
     net.eval()
     
     # specify these arguments manually 
-    args.num_labels = 40
+    args.num_labels = 200
     args.ulb_num_labels = 49600
     args.lb_imb_ratio = 1
     args.ulb_imb_ratio = 1
@@ -66,17 +74,34 @@ if __name__ == "__main__":
     args.num_train_iter = 1024
     dataset_dict = get_dataset(args, 'fixmatch', args.dataset, args.num_labels, args.num_classes, args.data_dir, False)
     eval_dset = dataset_dict['eval']
+
     eval_loader = DataLoader(eval_dset, batch_size=args.batch_size, drop_last=False, shuffle=False, num_workers=4)
- 
+    print('LENGTH OF TEST SET : ', len(eval_dset))
     acc = 0.0
+    ece = 0.0
+    aece = 0.0
+    cece = 0.0
+    brier = 0.0
     test_feats = []
     test_preds = []
     test_probs = []
     test_labels = []
+
+    metrics_dict = {}
+    checkpoint_file_name = os.path.basename(args.load_path)
+    checkpoint_directory = os.path.dirname(args.load_path)
+
     with torch.no_grad():
+        ece_criterion = ECELoss(15).cuda()
+        classwise_ece_loss = ClasswiseECELoss(n_bins=15).cuda()
+        adaptive_ece_loss = AdaptiveECELoss(n_bins=15).cuda()
+        brier_loss = BrierScore()
+        accuracy_values = []  # List to store accuracy values (0 or 1)
+        confidence_values = []  # List to store confidence (probability) values
+
         for data in eval_loader:
             image = data['x_lb']
-            target = data['y_lb']
+            target = data['y_lb'].cpu()  # Move target to CPU
 
             image = image.type(torch.FloatTensor).cuda()
             feat = net(image, only_feat=True)
@@ -84,15 +109,52 @@ if __name__ == "__main__":
             prob = logit.softmax(dim=-1)
             pred = prob.argmax(1)
 
-            acc += pred.cpu().eq(target).numpy().sum()
+            accuracy = pred.cpu().eq(target).numpy()
+            acc += accuracy.sum() 
+            confidence = prob.cpu().numpy()
+            accuracy_values.extend(accuracy)
+            confidence_values.extend(confidence)
 
             test_feats.append(feat.cpu().numpy())
             test_preds.append(pred.cpu().numpy())
-            test_probs.append(prob.cpu().numpy())
-            test_labels.append(target.cpu().numpy())
+            test_probs.append(logit.cpu())
+            test_labels.append(target)
+
     test_feats = np.concatenate(test_feats)
     test_preds = np.concatenate(test_preds)
     test_probs = np.concatenate(test_probs)
     test_labels = np.concatenate(test_labels)
 
-    print(f"Test Accuracy: {acc/len(eval_dset)}")
+    ece = ece_criterion(torch.from_numpy(test_probs), torch.from_numpy(test_labels))
+    aece = adaptive_ece_loss(torch.from_numpy(test_probs), torch.from_numpy(test_labels))
+    cece = classwise_ece_loss(torch.from_numpy(test_probs), torch.from_numpy(test_labels))
+    brier = brier_loss(torch.from_numpy(test_probs), torch.from_numpy(test_labels))
+
+    metrics_dict['Test ECE'] = ece 
+    metrics_dict['Test CECE'] = cece 
+    metrics_dict['Test AECE'] = aece
+    metrics_dict['Test Brier'] = brier 
+    metrics_dict['Test Accuracy'] = acc / len(eval_dset)
+    metrics_dict['Test Error'] = 1 - acc / len(eval_dset)
+
+    print("Metrics Dictionary:", metrics_dict)
+
+    # Convert tensor types to lists or numbers
+    converted_dict = {}
+    for key, value in metrics_dict.items():
+        if isinstance(value, torch.Tensor):
+            if value.dim() == 0:
+                converted_dict[key] = value.item()  # Convert single value tensor to number
+            else:
+                converted_dict[key] = value.tolist()  # Convert tensor to a list
+
+    checkpoint_file_name = os.path.basename(args.load_path)
+    checkpoint_directory = os.path.dirname(args.load_path)
+
+    metrics_file_name = os.path.splitext(checkpoint_file_name)[0] + "_metrics.json"
+    metrics_file_path = os.path.join(checkpoint_directory, metrics_file_name)
+
+    with open(metrics_file_path, 'w') as metrics_file:
+        json.dump(converted_dict, metrics_file)
+
+    print(f"Metrics saved to: {metrics_file_path}")

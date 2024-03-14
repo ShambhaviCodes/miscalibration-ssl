@@ -65,7 +65,7 @@ class FreeMatch(AlgorithmBase):
         super().set_hooks()
 
 
-    def train_step(self, x_lb, y_lb, x_ulb_w, x_ulb_s):
+    def train_step(self, margin_hyperparam, x_lb, y_lb, x_ulb_w, x_ulb_s):
         num_lb = y_lb.shape[0]
 
         # inference and calculate sup/unsup losses
@@ -103,6 +103,15 @@ class FreeMatch(AlgorithmBase):
                                           use_hard_label=self.use_hard_label,
                                           T=self.T)
             
+            matching_samples_mask = (pseudo_label == torch.argmax(logits_x_ulb_s, dim=1)) & (mask == 1)
+
+            # Apply the mask to logits_x_ulb_s and pseudo_label
+            matching_logits = logits_x_ulb_s[matching_samples_mask]
+            matching_pseudo_label = pseudo_label[matching_samples_mask]
+
+            # Calculate LogitMarginL1 loss
+            loss_margin = self.penalty_loss(matching_logits, matching_pseudo_label, margin_hyperparam)
+
             # calculate unlabeled loss
             unsup_loss = self.consistency_loss(logits_x_ulb_s,
                                           pseudo_label,
@@ -115,7 +124,7 @@ class FreeMatch(AlgorithmBase):
             else:
                ent_loss = 0.0
             # ent_loss = 0.0
-            total_loss = sup_loss + self.lambda_u * unsup_loss + self.lambda_e * ent_loss
+            total_loss = sup_loss + self.lambda_u * unsup_loss + self.lambda_e * ent_loss + loss_margin * self.p_penalty
 
         out_dict = self.process_out_dict(loss=total_loss, feat=feat_dict)
         log_dict = self.process_log_dict(sup_loss=sup_loss.item(), 
