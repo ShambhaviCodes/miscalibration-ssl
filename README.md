@@ -51,7 +51,7 @@ p_margin: 0.1
 Alternatively, you can run with a modified config file :
 
 ```sh
-python train.py --c config/usb_cv/fixmatch/fixmatch_cifar100_200_0_ce_mbls.yaml
+python train.py --c config/usb_cv/fixmatch/fixmatch_cifar100_200_0_penalty.yaml
 ```
 
 To evaluate the model for ECE and Errors :
