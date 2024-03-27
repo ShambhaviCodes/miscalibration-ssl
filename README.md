@@ -59,3 +59,18 @@ To evaluate the model for ECE and Errors :
 ```sh
 python eval.py --dataset cifar100 --num_classes 100 --load_path ./saved_model/best_model.pth
 ```
+
+### Cite Us
+Please cite us if you find this project helpful for your project/paper:
+
+```
+@misc{mishra2024trust,
+      title={Do not trust what you trust: Miscalibration in Semi-supervised Learning}, 
+      author={Shambhavi Mishra and Balamurali Murugesan and Ismail Ben Ayed and Marco Pedersoli and Jose Dolz},
+      year={2024},
+      eprint={2403.15567},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+```
+
