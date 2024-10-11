@@ -16,7 +16,7 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
-# Do not trust what you trust: Miscalibration in Semi-supervised Learning
+# [TMLR 2024] Do not trust what you trust: Miscalibration in Semi-supervised Learning
 
 ### Prerequisites
 This repo is built on top of [USB](https://github.com/microsoft/Semi-supervised-learning/tree/main).
