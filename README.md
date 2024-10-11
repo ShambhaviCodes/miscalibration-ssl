@@ -65,13 +65,15 @@ python eval.py --dataset cifar100 --num_classes 100 --load_path ./saved_model/be
 Please cite us if you find this project helpful for your project/paper:
 
 ```
-@misc{mishra2024trust,
-      title={Do not trust what you trust: Miscalibration in Semi-supervised Learning}, 
-      author={Shambhavi Mishra and Balamurali Murugesan and Ismail Ben Ayed and Marco Pedersoli and Jose Dolz},
-      year={2024},
-      eprint={2403.15567},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
+@article{
+mishra2024do,
+title={Do not trust what you trust: Miscalibration in Semisupervised Learning},
+author={Shambhavi Mishra and Balamurali Murugesan and Ismail Ben Ayed and Marco Pedersoli and Jose Dolz},
+journal={Transactions on Machine Learning Research},
+issn={2835-8856},
+year={2024},
+url={https://openreview.net/forum?id=1WqLLYgBNt},
+note={}
 }
 ```
 
